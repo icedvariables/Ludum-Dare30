@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<title>Ludum Dare 30</title>
+<script src="lib/phaser.min.js"></script>
+<script src="states/GameState.js"></script>
+</head>
+
+<body>
+Ludum Dare 30
+<div id="game"></div>
+By Max Black (icedvariables)
+
+<script type="text/javascript">
+var WIDTH = 800;
+var HEIGHT = 600;
+
+var game = new Phaser.Game(WIDTH, HEIGHT, Phaser.AUTO, "game");
+
+game.state.add("main game", GameState);
+
+game.state.start("main game");
+</script>
+</body>
+</html>
