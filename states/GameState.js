@@ -12,7 +12,7 @@ var GameState = function(){
 GameState.prototype = {
     preload:function(){
         this.load.spritesheet("player", "res/textures/player.png", 64, 64);
-        this.load.spritesheet("enemy0", "res/textures/enemy0.png", 64, 64);
+        this.load.spritesheet("enemy", "res/textures/enemy.png", 64, 32);
         
         this.load.image("platform", "res/textures/platform.png");
         this.load.image("background", "res/textures/background.png");
@@ -161,7 +161,7 @@ GameState.prototype = {
         }
         
         // SPAWN ENEMY
-        this.tryToSpawnEnemies("enemy0");
+        this.tryToSpawnEnemies("enemy");
         
         // MOVE ENEMIES
         this.enemies.forEach(this.moveEnemies, this);
@@ -192,12 +192,13 @@ GameState.prototype = {
     
     tryToSpawnEnemies:function(texture){
         if(this.time.now > this.nextEnemySpawnTime && this.enemies.length < 200 && this.spawnEnemies){
-            var enemy = this.enemies.create(this.portal.body.x, this.portal.body.y, texture);
+            var enemy = this.enemies.create(this.portal.body.x + Math.floor((Math.random() * 201)), this.portal.body.y + Math.floor((Math.random() * 201)), texture);
             this.physics.arcade.enable(enemy);
             enemy.body.bounce.y = 0.2;
             enemy.body.gravity.y = 500;
             
-            enemy.animations.add("main", [0, 1, 2, 4], 1000, true);
+            enemy.animations.add("left", [1, 3], 1000, true);
+            enemy.animations.add("right", [0, 2], 1000, true);
             
             console.log(this.info.monstersKilled);
             if(this.info.monstersKilled < 20){
@@ -231,15 +232,22 @@ GameState.prototype = {
     moveEnemies:function(enemy){ 
         // called for each enemy
         
-        if(enemy.body.x != this.player.body.x){
+        //console.log("Enemy: "+enemy.body.x);
+        //console.log("Player: "+this.player.body.x);
+        
+        var x = enemy.body.x - this.player.body.x
+        
+        console.log(x);
+        
+        if(x < 5 && x > -5){
             if(enemy.body.x > this.player.body.x){ // right
                 enemy.body.velocity.x = -200;
+                enemy.animations.play("right");
             }else{ // left
                 enemy.body.velocity.x = 200;
+                enemy.animations.play("left");
             }
         }
-        
-        enemy.animations.play("main");
     },
     
     pollInput:function(){
