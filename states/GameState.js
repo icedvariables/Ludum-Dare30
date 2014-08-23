@@ -4,11 +4,15 @@ var GameState = function(){
     this.nextFire = 0;
     this.fireRate = 200;
     this.health = 100;
+    this.lastEnemySpawn = 0;
+    this.timeBetweenEnemySpawn = 10000;
 };
 
 GameState.prototype = {
     preload:function(){
         this.load.spritesheet("player", "res/player.png", 64, 64);
+        this.load.spritesheet("enemy0", "res/enemy0.png", 64, 64);
+        
         this.load.image("platform", "res/platform.png");
         this.load.image("background", "res/background.png");
         this.load.image("portal", "res/portal.png");
@@ -29,20 +33,21 @@ GameState.prototype = {
         this.platforms = this.add.group();
         this.platforms.enableBody = true;
         
-        var platform = this.platforms.create(500, game.world.height / 2, "platform");
+        var platform = this.platforms.create(500, this.world.height / 2, "platform");
         platform.scale.setTo(30, 1);
         platform.body.immovable = true;
         
-        platform = this.platforms.create(100, game.world.height / 2 + 200, "platform");
+        platform = this.platforms.create(100, this.world.height / 2 + 200, "platform");
         platform.scale.setTo(40, 1);
         platform.body.immovable = true;
         
-        platform = this.platforms.create(600, game.world.height - 100, "platform");
+        platform = this.platforms.create(600, this.world.height - 100, "platform");
         platform.scale.setTo(25, 1);
         platform.body.immovable = true;
         
         // PORTAL
         this.portal = this.add.sprite(this.world.width / 2, this.world.height / 2 - 400, "portal");
+        this.physics.arcade.enable(this.portal);
     
         // PLAYER
         this.player = this.add.sprite(this.world.width / 2, this.world.height / 2 - 200, "player");
@@ -57,6 +62,10 @@ GameState.prototype = {
         
         this.player.animations.add("left", [0, 1, 2], 10, true);
         this.player.animations.add("right", [4, 5, 6], 10, true);
+        
+        // ENEMY
+        this.enemies = this.add.group();
+        this.enemies.enableBody = true;
         
         // BULLETS
         this.bullets = this.add.group();
@@ -77,11 +86,14 @@ GameState.prototype = {
         
         // CAMERA
         this.camera.follow(this.player);
+        
+        this.nextEnemySpawnTime = this.time.now + 1;
     },
     
     update:function(){
         this.physics.arcade.collide(this.player, this.platforms);
-        game.physics.arcade.overlap(this.platforms, this.bullets,
+        this.physics.arcade.collide(this.enemies, this.platforms);
+        this.physics.arcade.overlap(this.platforms, this.bullets,
         function(platform, bullet){
             bullet.kill();
         }, null, this);
@@ -110,7 +122,7 @@ GameState.prototype = {
             this.player.body.velocity.y = -500;
         }
         
-        if(game.input.activePointer.isDown){
+        if(this.input.activePointer.isDown){
             this.shoot();
         }
         
@@ -118,18 +130,30 @@ GameState.prototype = {
             var deathScreen = this.add.sprite(0, 0, "death screen");
             deathScreen.fixedToCamera = true;
         }
+        
+        this.tryToSpawnEnemy("enemy0");
+        
+        console.log("Time now: "+this.time.now);
+        console.log("Next enemy spawn time: "+this.nextEnemySpawnTime);
     },
     
     shoot:function(){
-        if(game.time.now > this.nextFire && this.bullets.countDead() > 0){
-            this.nextFire = game.time.now + this.fireRate;
+        if(this.time.now > this.nextFire && this.bullets.countDead() > 0){
+            this.nextFire = this.time.now + this.fireRate;
             var bullet = this.bullets.getFirstDead();
             bullet.reset(this.player.x + 64, this.player.y + 64);
-            game.physics.arcade.moveToPointer(bullet, 300);
+            this.physics.arcade.moveToPointer(bullet, 300);
         }
     },
     
-    spawnAlien:function(texture){
-        this.aliens.create(this.portal.x + Math.floor((Math.random() * this.portal.body.width) + 1), this.portal.x + Math.floor((Math.random() * this.portal.body.height) + 1), texture);
+    tryToSpawnEnemy:function(texture){
+        if(this.time.now > this.nextEnemySpawnTime){
+            var enemy = this.enemies.create(this.portal.body.x, this.portal.body.y, texture);
+            this.physics.arcade.enable(enemy);
+            enemy.body.bounce.y = 0.2;
+            enemy.body.gravity.y = 500;
+            
+            this.nextEnemySpawnTime = this.time.now + 3000;
+        }
     }
 };
