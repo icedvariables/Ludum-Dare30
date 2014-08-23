@@ -7,6 +7,7 @@ var GameState = function(){
     this.lastEnemySpawn = 0;
     this.timeBetweenEnemySpawn = 10000;
     this.spawnEnemies = true;
+    this.canShoot = true;
 };
 
 GameState.prototype = {
@@ -61,10 +62,10 @@ GameState.prototype = {
         this.player.body.bounce.y = 0.15;
         this.player.body.gravity.y = 500;
         this.physics.arcade.enable(this.player);
-        this.player.collideWorldBounds = true;
+        this.player.body.collideWorldBounds = true;
         
         this.player.animations.add("left", [0, 1, 2], 10, true);
-        this.player.animations.add("right", [4, 5, 6], 10, true);
+        this.player.animations.add("right", [3, 4, 5], 10, true);
         
         // ENEMY
         this.enemies = this.add.group();
@@ -90,7 +91,12 @@ GameState.prototype = {
         // CAMERA
         this.camera.follow(this.player);
         
-        this.nextEnemySpawnTime = this.time.now + 1;
+        // DEATH SCREEN
+        this.deathScreen = this.add.sprite(0, 0, "death screen");
+        this.deathScreen.fixedToCamera = true;
+        this.deathScreen.visible = false;
+        
+        this.nextEnemySpawnTime = this.time.now + 5000;
     },
     
     update:function(){
@@ -126,8 +132,8 @@ GameState.prototype = {
         
          // CHECK HEALTH
         if(this.health <= 0){
-            var deathScreen = this.add.sprite(0, 0, "death screen");
-            deathScreen.fixedToCamera = true;
+            this.deathScreen.visible = true;
+            this.canShoot = false;
             this.player.destroy();
         }
         
@@ -152,10 +158,15 @@ GameState.prototype = {
     },
     
     shoot:function(){
-        if(this.time.now > this.nextFire && this.bullets.countDead() > 0){
+        if(this.time.now > this.nextFire && this.bullets.countDead() > 0 && this.canShoot){
             this.nextFire = this.time.now + this.fireRate;
             var bullet = this.bullets.getFirstDead();
-            bullet.reset(this.player.x + 64, this.player.y + 64);
+            
+            if(this.direction == "left"){
+                bullet.reset(this.player.x + 20, this.player.y + 64);
+            }else{
+                bullet.reset(this.player.x + 100, this.player.y + 64);
+            }
             this.physics.arcade.moveToPointer(bullet, 600);
         }
     },
@@ -167,27 +178,24 @@ GameState.prototype = {
             enemy.body.bounce.y = 0.2;
             enemy.body.gravity.y = 500;
             
-            enemy.animations.add("left", [0, 1], 1, false);
-            enemy.animations.add("right", [3, 4], 1, false);
+            enemy.animations.add("main", [0, 1, 2, 4], 1000, true);
             
             this.nextEnemySpawnTime = this.time.now + 3000;
         }
     },
     
-    moveEnemies:function(enemy){
+    moveEnemies:function(enemy){ 
         // called for each enemy
         
-        if(enemy.body.x > this.player.body.x){ // right
-            enemy.body.velocity.x = -300;
-            if(enemy.animations.isFinished){
-                enemy.animations.play("right");
-            }
-        }else{ // left
-            enemy.body.velocity.x = 300;
-            if(enemy.animations.isFinished){
-                enemy.animations.play("left");
+        if(enemy.body.x != this.player.body.x){
+            if(enemy.body.x > this.player.body.x){ // right
+                enemy.body.velocity.x = -200;
+            }else{ // left
+                enemy.body.velocity.x = 200;
             }
         }
+        
+        enemy.animations.play("main");
     },
     
     pollInput:function(){
@@ -197,16 +205,18 @@ GameState.prototype = {
             this.player.body.velocity.x = -this.playerSpeed;
      
             this.player.animations.play("left");
+            
+            this.direction = "left";
         }
         else if(this.cursors.right.isDown){
             this.player.body.velocity.x = this.playerSpeed;
      
             this.player.animations.play("right");
+            
+            this.direction = "right";
         }
         else{
             this.player.animations.stop();
-     
-            this.player.frame = 3;
         }
 
         if (this.cursors.up.isDown && this.player.body.touching.down){
