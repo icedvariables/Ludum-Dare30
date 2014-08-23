@@ -3,7 +3,7 @@ var MenuState = function(){
 
 MenuState.prototype = {
     preload:function(){
-        this.load.image("logo", "res/logo.png");
+        this.load.image("logo", "res/textures/logo.png");
     },
     
     create:function(){
@@ -33,8 +33,6 @@ MenuState.prototype = {
         // probably play a sound or something here...
         
         console.log("play");
-        
-        this.input.keyboard.onDownCallback = null;
         
         game.state.start("main game");
     }

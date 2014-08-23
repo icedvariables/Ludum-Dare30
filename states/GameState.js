@@ -11,15 +11,18 @@ var GameState = function(){
 
 GameState.prototype = {
     preload:function(){
-        this.load.spritesheet("player", "res/player.png", 64, 64);
-        this.load.spritesheet("enemy0", "res/enemy0.png", 64, 64);
+        this.load.spritesheet("player", "res/textures/player.png", 64, 64);
+        this.load.spritesheet("enemy0", "res/textures/enemy0.png", 64, 64);
         
-        this.load.image("platform", "res/platform.png");
-        this.load.image("background", "res/background.png");
-        this.load.image("portal", "res/portal.png");
-        this.load.image("bullet", "res/bullet.png");
-        this.load.image("death screen", "res/death.png");
-        this.load.image("hud", "res/hud.png");
+        this.load.image("platform", "res/textures/platform.png");
+        this.load.image("background", "res/textures/background.png");
+        this.load.image("portal", "res/textures/portal.png");
+        this.load.image("bullet", "res/textures/bullet.png");
+        this.load.image("hud", "res/textures/hud.png");
+        
+        this.load.audio("kill", "res/audio/kill.wav");
+        this.load.audio("jump", "res/audio/jump.wav");
+        this.load.audio("hurt", "res/audio/hurt.wav");
         
         game.time.advancedTiming = true;
     },
@@ -28,6 +31,10 @@ GameState.prototype = {
         this.physics.startSystem(Phaser.Physics.ARCADE);
         
         this.world.setBounds(0, 0, 1000, 1000);
+        
+        // RESET INFO
+        this.info.reset();
+        this.canShoot = true;
          
          // BACKGROUND
         var background = this.add.sprite(0, 0, "background");
@@ -86,18 +93,27 @@ GameState.prototype = {
         // CAMERA
         this.camera.follow(this.player);
         
-        // DEATH SCREEN
-        this.deathScreen = this.add.sprite(0, 0, "death screen");
-        this.deathScreen.fixedToCamera = true;
-        this.deathScreen.visible = false;
-        
         // HUD
         this.hud = this.add.sprite(0, HEIGHT - 50, "hud");
         this.hud.fixedToCamera = true;
         
         this.info.createText(this);
         
-        this.nextEnemySpawnTime = this.time.now + 5000;
+        // SOUND EFFECTS
+        this.killSound = this.add.audio("kill");
+        this.jumpSound = this.add.audio("jump");
+        this.hurtSound = this.add.audio("hurt");
+        
+        // NEXT ENEMY SPAWN TIME
+        this.nextEnemySpawnTime = this.time.now + 3000;
+        
+        // START TIME
+        this.startTime = game.time.now;
+        
+        // DIFFICULTY TEXT
+        var style = {font:"20px Arial", fill:"#000000", align:"center"};
+        this.difficultyText = this.add.text(WIDTH - 300, 10, "Pfft... Could do better in my sleep", style);
+        this.difficultyText.fixedToCamera = true;
     },
     
     update:function(){
@@ -109,21 +125,25 @@ GameState.prototype = {
             bullet.kill();
         }, null, this);
         
-        this.physics.arcade.overlap(this.player, this.enemies,
+        this.physics.arcade.overlap(this.player, this.enemies, // Player contacts Enemy
         function(player, enemy){
             if(this.info.monstersKilled > 5){
                 this.info.health -= this.info.monstersKilled / 5;
             }else{
                 this.info.health -= 0.5;
             }
+            if(!this.hurtSound.isPlaying){
+                this.hurtSound.play();
+            }
         }, null, this);
         
-        this.physics.arcade.overlap(this.bullets, this.enemies,
+        this.physics.arcade.overlap(this.bullets, this.enemies, // Bullets contacts Enemies
         function(bullet, enemy){
             bullet.kill();
             enemy.destroy();
             ++this.info.monstersKilled;
             --this.info.aliveMonsters;
+            this.killSound.play();
         }, null, this);
         
         // UPDATE HUD
@@ -134,9 +154,10 @@ GameState.prototype = {
         
          // CHECK HEALTH
         if(this.info.health <= 0){
-            this.deathScreen.visible = true;
             this.canShoot = false;
+            this.info.health = "DEAD";
             this.player.destroy();
+            game.state.start("death screen");
         }
         
         // SPAWN ENEMY
@@ -147,10 +168,6 @@ GameState.prototype = {
         
         // DEBUG STUFF
         if(DEBUG){
-            console.log("Time now: "+this.time.now);
-            console.log("Next enemy spawn time: "+this.nextEnemySpawnTime);
-            console.log("Number of alive enemies: "+this.enemies.length);
-            
             // Don't know why but the 'game.'s below cannot be 'this.'s or it will break...
             game.debug.cameraInfo(this.camera, 32, 32);
             game.debug.spriteCoords(this.player, 32, 400);
@@ -182,7 +199,29 @@ GameState.prototype = {
             
             enemy.animations.add("main", [0, 1, 2, 4], 1000, true);
             
-            this.nextEnemySpawnTime = this.time.now + 3000;
+            console.log(this.info.monstersKilled);
+            if(this.info.monstersKilled < 20){
+                this.nextEnemySpawnTime = game.time.now + 1000;
+                this.difficultyText.text = "Pfft... Could do better in my sleep";
+            }else if(this.info.monstersKilled < 60){
+                this.nextEnemySpawnTime = game.time.now + 800;
+                this.difficultyText.text = "Wow, you're bad";
+            }else if(this.info.monstersKilled < 80){
+                this.nextEnemySpawnTime = game.time.now + 600;
+                this.difficultyText.text = "Meh";
+            }else if(this.info.monstersKilled < 100){
+                this.nextEnemySpawnTime = game.time.now + 400;
+                this.difficultyText.text = "Average";
+            }else if(this.info.monstersKilled < 130){
+                this.nextEnemySpawnTime = game.time.now + 300;
+                this.difficultyText.text = "Pretty good";
+            }else if(this.info.monstersKilled < 150){
+                this.nextEnemySpawnTime = game.time.now + 200;
+                this.difficultyText.text = "Very good!";
+            }else{
+                this.nextEnemySpawnTime = game.time.now + 10;
+                this.difficultyText.text = "HAX!";
+            }
             
             ++this.info.totalMonsters;
             ++this.info.aliveMonsters;
@@ -226,6 +265,7 @@ GameState.prototype = {
 
         if (this.cursors.up.isDown && this.player.body.touching.down){
             this.player.body.velocity.y = -500;
+            this.jumpSound.play();
         }
         
         if(this.input.activePointer.isDown){

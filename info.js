@@ -1,15 +1,18 @@
 // Contains infomation such as the player's health and total monsters killed
 
 var Info = function(){
-    this.totalMonsters = 0;
-    this.aliveMonsters = 0;
-    this.monstersKilled = 0;
-    this.health = 100;
-    
-    this.offsetFromBottom = 35;
 }
 
 Info.prototype = {
+    reset:function(){
+        this.totalMonsters = 0;
+        this.aliveMonsters = 0;
+        this.monstersKilled = 0;
+        this.health = 100;
+        
+        this.offsetFromBottom = 35;
+    },
+
     createText:function(g){
         var style = {font:"20px Arial", fill:"#ffffff", align:"center"};
         this.totalMonstersText = g.add.text(240, HEIGHT - this.offsetFromBottom, this.totalMonsters, style);
