@@ -1,6 +1,6 @@
 var GameState = function(){
     this.playerSpeed = 300;
-    this.aliensKilled = 0;
+    this.enemiesKilled = 0;
     this.nextFire = 0;
     this.fireRate = 200;
     this.health = 100;
@@ -18,6 +18,8 @@ GameState.prototype = {
         this.load.image("portal", "res/portal.png");
         this.load.image("bullet", "res/bullet.png");
         this.load.image("death screen", "res/death.png");
+        
+        game.time.advancedTiming = true;
     },
     
     create:function(){
@@ -78,7 +80,7 @@ GameState.prototype = {
         
         // HUD
         var style = {font:"12px Arial", fill:"#ff0044", align:"center"};
-        this.hudText = this.add.text(WIDTH - 100, HEIGHT - 50, "Aliens killed: "+this.aliensKilled+"\nHealth: "+this.health, style);
+        this.hudText = this.add.text(WIDTH - 150, HEIGHT - 50, "Aliens killed: "+this.enemiesKilled+"\nHealth: "+this.health, style);
         this.hudText.fixedToCamera = true;
         
         // CURSORS
@@ -91,6 +93,7 @@ GameState.prototype = {
     },
     
     update:function(){
+        // COLLISION
         this.physics.arcade.collide(this.player, this.platforms);
         this.physics.arcade.collide(this.enemies, this.platforms);
         this.physics.arcade.overlap(this.platforms, this.bullets,
@@ -98,8 +101,89 @@ GameState.prototype = {
             bullet.kill();
         }, null, this);
         
-        this.hudText.text = "Aliens killed: "+this.aliensKilled+"\nHealth: "+this.health;
+        this.physics.arcade.overlap(this.player, this.enemies,
+        function(player, enemy){
+            if(this.enemiesKilled > 5){
+                this.health -= this.enemiesKilled / 5;
+            }else{
+                this.health -= 0.5;
+            }
+        }, null, this);
         
+        this.physics.arcade.overlap(this.bullets, this.enemies,
+        function(bullet, enemy){
+            bullet.kill();
+            enemy.destroy();
+            this.enemiesKilled += 1;
+        }, null, this);
+        
+        // UPDATE HUD
+        this.hudText.text = "Aliens killed: "+this.enemiesKilled+"\nHealth: "+this.health;
+        
+        // INPUT/PLAYER MOVEMENT
+        this.pollInput()
+        
+         // CHECK HEALTH
+        if(this.health <= 0){
+            var deathScreen = this.add.sprite(0, 0, "death screen");
+            deathScreen.fixedToCamera = true;
+        }
+        
+        // SPAWN ENEMY
+        this.tryToSpawnEnemies("enemy0");
+        
+        // MOVE ENEMIES
+        this.enemies.forEach(this.moveEnemies, this);
+        
+        // DEBUG STUFF
+        if(DEBUG){
+            console.log("Time now: "+this.time.now);
+            console.log("Next enemy spawn time: "+this.nextEnemySpawnTime);
+            
+            // Don't know why but the 'game.'s below cannot be 'this.'s or it will break...
+            game.debug.cameraInfo(this.camera, 32, 32);
+            game.debug.spriteCoords(this.player, 32, 400);
+            
+            game.debug.text(game.time.fps, 2, 15, "#00ff00");
+        }
+    },
+    
+    shoot:function(){
+        if(this.time.now > this.nextFire && this.bullets.countDead() > 0){
+            this.nextFire = this.time.now + this.fireRate;
+            var bullet = this.bullets.getFirstDead();
+            bullet.reset(this.player.x + 64, this.player.y + 64);
+            this.physics.arcade.moveToPointer(bullet, 300);
+        }
+    },
+    
+    tryToSpawnEnemies:function(texture){
+        if(this.time.now > this.nextEnemySpawnTime && this.enemies.length < 200 && this.spawnEnemies){
+            var enemy = this.enemies.create(this.portal.body.x, this.portal.body.y, texture);
+            this.physics.arcade.enable(enemy);
+            enemy.body.bounce.y = 0.2;
+            enemy.body.gravity.y = 500;
+            
+            enemy.animations.add("left", [0, 1], 7, false);
+            enemy.animations.add("right", [3, 4], 7, false);
+            
+            this.nextEnemySpawnTime = this.time.now + 3000;
+        }
+    },
+    
+    moveEnemies:function(enemy){
+        // called for each enemy
+        
+        if(enemy.body.x > this.player.body.x){ // right
+            enemy.body.velocity.x = -300;
+            enemy.animations.play("right");
+        }else{ // left
+            enemy.body.velocity.x = 300;
+            enemy.animations.play("left");
+        }
+    },
+    
+    pollInput:function(){
         this.player.body.velocity.x = 0;
  
         if(this.cursors.left.isDown){
@@ -124,36 +208,6 @@ GameState.prototype = {
         
         if(this.input.activePointer.isDown){
             this.shoot();
-        }
-        
-        if(this.health <= 0){
-            var deathScreen = this.add.sprite(0, 0, "death screen");
-            deathScreen.fixedToCamera = true;
-        }
-        
-        this.tryToSpawnEnemy("enemy0");
-        
-        console.log("Time now: "+this.time.now);
-        console.log("Next enemy spawn time: "+this.nextEnemySpawnTime);
-    },
-    
-    shoot:function(){
-        if(this.time.now > this.nextFire && this.bullets.countDead() > 0){
-            this.nextFire = this.time.now + this.fireRate;
-            var bullet = this.bullets.getFirstDead();
-            bullet.reset(this.player.x + 64, this.player.y + 64);
-            this.physics.arcade.moveToPointer(bullet, 300);
-        }
-    },
-    
-    tryToSpawnEnemy:function(texture){
-        if(this.time.now > this.nextEnemySpawnTime){
-            var enemy = this.enemies.create(this.portal.body.x, this.portal.body.y, texture);
-            this.physics.arcade.enable(enemy);
-            enemy.body.bounce.y = 0.2;
-            enemy.body.gravity.y = 500;
-            
-            this.nextEnemySpawnTime = this.time.now + 3000;
         }
     }
 };
