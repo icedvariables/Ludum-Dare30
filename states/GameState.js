@@ -13,6 +13,7 @@ GameState.prototype = {
         this.load.image("background", "res/background.png");
         this.load.image("portal", "res/portal.png");
         this.load.image("bullet", "res/bullet.png");
+        this.load.image("death screen", "res/death.png");
     },
     
     create:function(){
@@ -111,6 +112,11 @@ GameState.prototype = {
         
         if(game.input.activePointer.isDown){
             this.shoot();
+        }
+        
+        if(this.health <= 0){
+            var deathScreen = this.add.sprite(0, 0, "death screen");
+            deathScreen.fixedToCamera = true;
         }
     },
     
