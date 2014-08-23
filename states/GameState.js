@@ -1,13 +1,12 @@
 var GameState = function(){
     this.playerSpeed = 300;
-    this.enemiesKilled = 0;
     this.nextFire = 0;
     this.fireRate = 200;
-    this.health = 100;
     this.lastEnemySpawn = 0;
     this.timeBetweenEnemySpawn = 10000;
     this.spawnEnemies = true;
     this.canShoot = true;
+    this.info =/* I've got us some */new Info(); // ... Well I thought it was funny...
 };
 
 GameState.prototype = {
@@ -20,6 +19,7 @@ GameState.prototype = {
         this.load.image("portal", "res/portal.png");
         this.load.image("bullet", "res/bullet.png");
         this.load.image("death screen", "res/death.png");
+        this.load.image("hud", "res/hud.png");
         
         game.time.advancedTiming = true;
     },
@@ -80,11 +80,6 @@ GameState.prototype = {
         this.bullets.setAll("checkWorldBounds", true);
         this.bullets.setAll("outOfBoundsKill", true);
         
-        // HUD
-        var style = {font:"12px Arial", fill:"#ff0044", align:"center"};
-        this.hudText = this.add.text(WIDTH - 150, HEIGHT - 50, "Aliens killed: "+this.enemiesKilled+"\nHealth: "+this.health, style);
-        this.hudText.fixedToCamera = true;
-        
         // CURSORS
         this.cursors = this.input.keyboard.createCursorKeys();
         
@@ -95,6 +90,12 @@ GameState.prototype = {
         this.deathScreen = this.add.sprite(0, 0, "death screen");
         this.deathScreen.fixedToCamera = true;
         this.deathScreen.visible = false;
+        
+        // HUD
+        this.hud = this.add.sprite(0, HEIGHT - 50, "hud");
+        this.hud.fixedToCamera = true;
+        
+        this.info.createText(this);
         
         this.nextEnemySpawnTime = this.time.now + 5000;
     },
@@ -110,10 +111,10 @@ GameState.prototype = {
         
         this.physics.arcade.overlap(this.player, this.enemies,
         function(player, enemy){
-            if(this.enemiesKilled > 5){
-                this.health -= this.enemiesKilled / 5;
+            if(this.info.monstersKilled > 5){
+                this.info.health -= this.info.monstersKilled / 5;
             }else{
-                this.health -= 0.5;
+                this.info.health -= 0.5;
             }
         }, null, this);
         
@@ -121,17 +122,18 @@ GameState.prototype = {
         function(bullet, enemy){
             bullet.kill();
             enemy.destroy();
-            this.enemiesKilled += 1;
+            ++this.info.monstersKilled;
+            --this.info.aliveMonsters;
         }, null, this);
         
         // UPDATE HUD
-        this.hudText.text = "Aliens killed: "+this.enemiesKilled+"\nHealth: "+this.health;
+        this.info.updateText();
         
         // INPUT/PLAYER MOVEMENT
         this.pollInput()
         
          // CHECK HEALTH
-        if(this.health <= 0){
+        if(this.info.health <= 0){
             this.deathScreen.visible = true;
             this.canShoot = false;
             this.player.destroy();
@@ -181,6 +183,9 @@ GameState.prototype = {
             enemy.animations.add("main", [0, 1, 2, 4], 1000, true);
             
             this.nextEnemySpawnTime = this.time.now + 3000;
+            
+            ++this.info.totalMonsters;
+            ++this.info.aliveMonsters;
         }
     },
     
