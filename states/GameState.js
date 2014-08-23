@@ -6,6 +6,7 @@ var GameState = function(){
     this.health = 100;
     this.lastEnemySpawn = 0;
     this.timeBetweenEnemySpawn = 10000;
+    this.spawnEnemies = true;
 };
 
 GameState.prototype = {
@@ -36,7 +37,7 @@ GameState.prototype = {
         this.platforms.enableBody = true;
         
         var platform = this.platforms.create(500, this.world.height / 2, "platform");
-        platform.scale.setTo(30, 1);
+        platform.scale.setTo(40, 1);
         platform.body.immovable = true;
         
         platform = this.platforms.create(100, this.world.height / 2 + 200, "platform");
@@ -127,6 +128,7 @@ GameState.prototype = {
         if(this.health <= 0){
             var deathScreen = this.add.sprite(0, 0, "death screen");
             deathScreen.fixedToCamera = true;
+            this.player.destroy();
         }
         
         // SPAWN ENEMY
@@ -139,6 +141,7 @@ GameState.prototype = {
         if(DEBUG){
             console.log("Time now: "+this.time.now);
             console.log("Next enemy spawn time: "+this.nextEnemySpawnTime);
+            console.log("Number of alive enemies: "+this.enemies.length);
             
             // Don't know why but the 'game.'s below cannot be 'this.'s or it will break...
             game.debug.cameraInfo(this.camera, 32, 32);
@@ -153,7 +156,7 @@ GameState.prototype = {
             this.nextFire = this.time.now + this.fireRate;
             var bullet = this.bullets.getFirstDead();
             bullet.reset(this.player.x + 64, this.player.y + 64);
-            this.physics.arcade.moveToPointer(bullet, 300);
+            this.physics.arcade.moveToPointer(bullet, 600);
         }
     },
     
@@ -164,8 +167,8 @@ GameState.prototype = {
             enemy.body.bounce.y = 0.2;
             enemy.body.gravity.y = 500;
             
-            enemy.animations.add("left", [0, 1], 7, false);
-            enemy.animations.add("right", [3, 4], 7, false);
+            enemy.animations.add("left", [0, 1], 1, false);
+            enemy.animations.add("right", [3, 4], 1, false);
             
             this.nextEnemySpawnTime = this.time.now + 3000;
         }
@@ -176,10 +179,14 @@ GameState.prototype = {
         
         if(enemy.body.x > this.player.body.x){ // right
             enemy.body.velocity.x = -300;
-            enemy.animations.play("right");
+            if(enemy.animations.isFinished){
+                enemy.animations.play("right");
+            }
         }else{ // left
             enemy.body.velocity.x = 300;
-            enemy.animations.play("left");
+            if(enemy.animations.isFinished){
+                enemy.animations.play("left");
+            }
         }
     },
     
