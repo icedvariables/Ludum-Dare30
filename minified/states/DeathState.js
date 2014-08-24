@@ -1,0 +1,3 @@
+var DeathState=function(){};
+DeathState.prototype={preload:function(){this.load.image("death screen","res/textures/death.png")},create:function(){this.add.sprite(0,0,"death screen");this.spaceKey=this.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR,!0);this.info=infoForDeathState;if(1<this.info.monstersKilled)var a="You killed "+this.info.monstersKilled+" monsters...",b=WIDTH/2-100;else 1===this.info.monstersKilled?(a="You killed a single monster...",b=WIDTH/2-115):0===this.info.monstersKilled&&(a="You couldn't kill a single monster...",
+b=WIDTH/2-150);this.add.text(b,400,a,{font:"20px Arial",fill:"#00aa00",align:"center"});game.stage.backgroundColor="#2d5968"},update:function(){this.spaceKey.isDown&&game.state.start("main game")}};
