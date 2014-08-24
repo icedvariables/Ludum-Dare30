@@ -9,6 +9,8 @@ Info.prototype = {
         this.aliveMonsters = 0;
         this.monstersKilled = 0;
         this.health = 100;
+        this.maxAmmo = 20;
+        this.ammo = this.maxAmmo;
         
         this.offsetFromBottom = 35;
     },
@@ -23,6 +25,8 @@ Info.prototype = {
         this.monstersKilledText.fixedToCamera = true;
         this.healthText = g.add.text(725, HEIGHT - this.offsetFromBottom, this.health, style);
         this.healthText.fixedToCamera = true;
+        this.ammoText = g.add.text(75, HEIGHT - this.offsetFromBottom, this.ammo, style);
+        this.ammoText.fixedToCamera = true;
     },
     
     updateText:function(){
@@ -30,5 +34,6 @@ Info.prototype = {
         this.aliveMonstersText.text = this.aliveMonsters.toString();
         this.monstersKilledText.text = this.monstersKilled.toString();
         this.healthText.text = this.health.toString();
+        this.ammoText.text = this.ammo.toString();
     }
 }

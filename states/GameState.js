@@ -7,6 +7,7 @@ var GameState = function(){
     this.spawnEnemies = true;
     this.canShoot = true;
     this.info =/* I've got us some */new Info(); // ... Well I thought it was funny...
+    this.hasResetAmmo = true;
 };
 
 GameState.prototype = {
@@ -30,7 +31,7 @@ GameState.prototype = {
     create:function(){
         this.physics.startSystem(Phaser.Physics.ARCADE);
         
-        this.world.setBounds(0, 0, 1000, 1000);
+        this.world.setBounds(0, 0, 2000, 1000);
         
         // RESET INFO
         this.info.reset();
@@ -44,17 +45,19 @@ GameState.prototype = {
         this.platforms = this.add.group();
         this.platforms.enableBody = true;
         
-        var platform = this.platforms.create(500, this.world.height / 2, "platform");
-        platform.scale.setTo(40, 1);
+        // platform farthest to the left
+        var platform = this.platforms.create(50, this.world.height / 2, "platform");
+        platform.scale.x = 100;
         platform.body.immovable = true;
         
-        platform = this.platforms.create(100, this.world.height / 2 + 200, "platform");
-        platform.scale.setTo(40, 1);
+        // second platform from the left
+        platform = this.platforms.create(1200, this.world.height / 2 + 50, "platform");
+        platform.scale.x = 30;
         platform.body.immovable = true;
         
-        platform = this.platforms.create(600, this.world.height - 100, "platform");
-        platform.scale.setTo(25, 1);
-        platform.body.immovable = true;
+        this.platform = this.platforms.create(1600, this.world.height - 300, "platform");
+        this.platform.scale.x = 30;
+        this.platform.body.immovable = true;
         
         // PORTAL
         this.portal = this.add.sprite(this.world.width / 2, this.world.height / 2 - 400, "portal");
@@ -99,6 +102,9 @@ GameState.prototype = {
         
         this.info.createText(this);
         
+        // RELOAD TIME
+        this.reloadTime = this.time.now;
+        
         // SOUND EFFECTS
         this.killSound = this.add.audio("kill");
         this.jumpSound = this.add.audio("jump");
@@ -109,6 +115,9 @@ GameState.prototype = {
         
         // START TIME
         this.startTime = game.time.now;
+        
+        // SHOOT CALLBACK
+        this.input.onDown.add(this.shoot, this);
         
         // DIFFICULTY TEXT
         var style = {font:"20px Arial", fill:"#000000", align:"center"};
@@ -160,8 +169,14 @@ GameState.prototype = {
             game.state.start("death screen");
         }
         
+        // CHEKC AMMO
+        if(this.info.ammo <= 0){
+            this.reload();
+        }
+        
         // SPAWN ENEMY
-        this.tryToSpawnEnemies("enemy");
+        if(!GOD_MODE)
+            this.tryToSpawnEnemies("enemy");
         
         // MOVE ENEMIES
         this.enemies.forEach(this.moveEnemies, this);
@@ -169,15 +184,14 @@ GameState.prototype = {
         // DEBUG STUFF
         if(DEBUG){
             // Don't know why but the 'game.'s below cannot be 'this.'s or it will break...
-            game.debug.cameraInfo(this.camera, 32, 32);
-            game.debug.spriteCoords(this.player, 32, 400);
+            game.debug.spriteCoords(this.player, 32, 32);
             
             game.debug.text(game.time.fps, 2, 15, "#00ff00");
         }
     },
     
     shoot:function(){
-        if(this.time.now > this.nextFire && this.bullets.countDead() > 0 && this.canShoot){
+        if(this.time.now > this.nextFire && this.bullets.countDead() > 0 && this.canShoot && this.time.now > this.reloadTime){
             this.nextFire = this.time.now + this.fireRate;
             var bullet = this.bullets.getFirstDead();
             
@@ -187,6 +201,8 @@ GameState.prototype = {
                 bullet.reset(this.player.x + 100, this.player.y + 64);
             }
             this.physics.arcade.moveToPointer(bullet, 600);
+            
+            --this.info.ammo;
         }
     },
     
@@ -196,6 +212,8 @@ GameState.prototype = {
             this.physics.arcade.enable(enemy);
             enemy.body.bounce.y = 0.2;
             enemy.body.gravity.y = 500;
+            
+            enemy.scale.setTo(Math.floor((Math.random() * 2) + 2), Math.floor((Math.random() * 3) + 1));
             
             enemy.animations.add("left", [1, 3], 1000, true);
             enemy.animations.add("right", [0, 2], 1000, true);
@@ -232,21 +250,12 @@ GameState.prototype = {
     moveEnemies:function(enemy){ 
         // called for each enemy
         
-        //console.log("Enemy: "+enemy.body.x);
-        //console.log("Player: "+this.player.body.x);
-        
-        var x = enemy.body.x - this.player.body.x
-        
-        console.log(x);
-        
-        if(x < 5 && x > -5){
-            if(enemy.body.x > this.player.body.x){ // right
-                enemy.body.velocity.x = -200;
-                enemy.animations.play("right");
-            }else{ // left
-                enemy.body.velocity.x = 200;
-                enemy.animations.play("left");
-            }
+        if(enemy.body.x > this.player.body.x){ // right
+            enemy.body.velocity.x = -200;
+            enemy.animations.play("right");
+        }else{ // left
+            enemy.body.velocity.x = 200;
+            enemy.animations.play("left");
         }
     },
     
@@ -271,13 +280,19 @@ GameState.prototype = {
             this.player.animations.stop();
         }
 
-        if (this.cursors.up.isDown && this.player.body.touching.down){
-            this.player.body.velocity.y = -500;
-            this.jumpSound.play();
+        if (this.cursors.up.isDown){
+            if(GOD_MODE){
+                this.player.body.velocity.y = -500;
+            }else if(this.player.body.touching.down){
+                this.player.body.velocity.y = -500;
+                this.jumpSound.play();
+            }
         }
-        
-        if(this.input.activePointer.isDown){
-            this.shoot();
-        }
+    },
+    
+    reload:function(){
+        this.reloading = true;
+        this.reloadTime = game.time.now + 2000;
+        this.info.ammo = this.info.maxAmmo;
     }
 };
