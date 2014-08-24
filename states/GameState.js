@@ -8,6 +8,8 @@ var GameState = function(){
     this.canShoot = true;
     this.info =/* I've got us some */new Info(); // ... Well I thought it was funny...
     this.hasResetAmmo = true;
+    this.godMode = false;
+    this.godModeEndTime;
 };
 
 GameState.prototype = {
@@ -121,8 +123,14 @@ GameState.prototype = {
         
         // DIFFICULTY TEXT
         var style = {font:"20px Arial", fill:"#000000", align:"center"};
-        this.difficultyText = this.add.text(WIDTH - 300, 10, "Pfft... Could do better in my sleep", style);
+        this.difficultyText = this.add.text(WIDTH - 250, 10, "Could do better in my sleep", style);
         this.difficultyText.fixedToCamera = true;
+        
+        // GOD MODE TEXT
+        var style = {font:"25px Arial", fill:"#e7be1b", align:"center"};
+        this.godModeText = this.add.text(WIDTH / 2 - 150, HEIGHT / 2 - 100, "", style);
+        this.godModeText.fixedToCamera = true;
+        this.godModeText.visible = false;
     },
     
     update:function(){
@@ -134,17 +142,19 @@ GameState.prototype = {
             bullet.kill();
         }, null, this);
         
-        this.physics.arcade.overlap(this.player, this.enemies, // Player contacts Enemy
-        function(player, enemy){
-            if(this.info.monstersKilled > 5){
-                this.info.health -= this.info.monstersKilled / 5;
-            }else{
-                this.info.health -= 0.5;
-            }
-            if(!this.hurtSound.isPlaying){
-                this.hurtSound.play();
-            }
-        }, null, this);
+        if(!this.godMode){
+            this.physics.arcade.overlap(this.player, this.enemies, // Player contacts Enemy
+            function(player, enemy){
+                if(this.info.monstersKilled > 5){
+                    this.info.health -= this.info.monstersKilled / 5;
+                }else{
+                    this.info.health -= 0.5;
+                }
+                if(!this.hurtSound.isPlaying){
+                    this.hurtSound.play();
+                }
+            }, null, this);
+        }
         
         this.physics.arcade.overlap(this.bullets, this.enemies, // Bullets contacts Enemies
         function(bullet, enemy){
@@ -154,6 +164,18 @@ GameState.prototype = {
             --this.info.aliveMonsters;
             this.killSound.play();
         }, null, this);
+        
+        // STILL COLLISION
+        
+        if(this.godMode){
+            this.physics.arcade.overlap(this.player, this.enemies, // Player contact Enemies (God Mode only)
+            function(player, enemy){
+                enemy.destroy();
+                ++this.info.monstersKilled;
+                --this.info.aliveMonsters;
+                this.killSound.play();
+        }, null, this);
+        }
         
         // UPDATE HUD
         this.info.updateText();
@@ -166,6 +188,7 @@ GameState.prototype = {
             this.canShoot = false;
             this.info.health = "DEAD";
             this.player.destroy();
+            infoForDeathState = this.info;
             game.state.start("death screen");
         }
         
@@ -175,16 +198,33 @@ GameState.prototype = {
         }
         
         // SPAWN ENEMY
-        if(!GOD_MODE)
-            this.tryToSpawnEnemies("enemy");
+        this.tryToSpawnEnemies("enemy");
         
         // MOVE ENEMIES
         this.enemies.forEach(this.moveEnemies, this);
+        
+        // GOD MODE
+        if(this.godMode){
+            if(this.time.now > this.godModeEndTime){
+                this.godMode = false;
+            }
+            
+            this.godModeText.visible = true;
+            this.godModeText.text = "God Mode: "+(this.godModeEndTime - this.time.now)+"\nMonsters dissolve when touched\nJump in mid-air!"; 
+        }else{
+            this.godModeText.visible = false;
+        }
+        
+        if(this.info.monstersKilled % 30 == 0 && this.info.monstersKilled !== 0){
+            this.godMode = true;
+            this.godModeEndTime = this.time.now + (this.info.monstersKilled * 100);
+        }
         
         // DEBUG STUFF
         if(DEBUG){
             // Don't know why but the 'game.'s below cannot be 'this.'s or it will break...
             game.debug.spriteCoords(this.player, 32, 32);
+            game.debug.spriteCoords(this.godModeText, 32, 300);
             
             game.debug.text(game.time.fps, 2, 15, "#00ff00");
         }
@@ -213,7 +253,7 @@ GameState.prototype = {
             enemy.body.bounce.y = 0.2;
             enemy.body.gravity.y = 500;
             
-            enemy.scale.setTo(Math.floor((Math.random() * 2) + 2), Math.floor((Math.random() * 3) + 1));
+            enemy.scale.setTo(Math.floor((Math.random() * 2) + 2), Math.floor((Math.random() * 2) + 2));
             
             enemy.animations.add("left", [1, 3], 1000, true);
             enemy.animations.add("right", [0, 2], 1000, true);
@@ -221,25 +261,18 @@ GameState.prototype = {
             console.log(this.info.monstersKilled);
             if(this.info.monstersKilled < 20){
                 this.nextEnemySpawnTime = game.time.now + 1000;
-                this.difficultyText.text = "Pfft... Could do better in my sleep";
             }else if(this.info.monstersKilled < 60){
                 this.nextEnemySpawnTime = game.time.now + 800;
-                this.difficultyText.text = "Wow, you're bad";
             }else if(this.info.monstersKilled < 80){
                 this.nextEnemySpawnTime = game.time.now + 600;
-                this.difficultyText.text = "Meh";
             }else if(this.info.monstersKilled < 100){
                 this.nextEnemySpawnTime = game.time.now + 400;
-                this.difficultyText.text = "Average";
             }else if(this.info.monstersKilled < 130){
                 this.nextEnemySpawnTime = game.time.now + 300;
-                this.difficultyText.text = "Pretty good";
             }else if(this.info.monstersKilled < 150){
                 this.nextEnemySpawnTime = game.time.now + 200;
-                this.difficultyText.text = "Very good!";
             }else{
                 this.nextEnemySpawnTime = game.time.now + 10;
-                this.difficultyText.text = "HAX!";
             }
             
             ++this.info.totalMonsters;
@@ -281,7 +314,7 @@ GameState.prototype = {
         }
 
         if (this.cursors.up.isDown){
-            if(GOD_MODE){
+            if(this.godMode){
                 this.player.body.velocity.y = -500;
             }else if(this.player.body.touching.down){
                 this.player.body.velocity.y = -500;

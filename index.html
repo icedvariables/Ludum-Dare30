@@ -20,9 +20,11 @@ By Max Black (icedvariables)
 <script type="text/javascript">
 var WIDTH = 800;
 var HEIGHT = 600;
-var DEBUG = true;
+var DEBUG = false;
 
-var GOD_MODE = false;
+// Set to GameState's instance of info when the player dies to allow
+// DeathState to display how well the player did
+var infoForDeathState;
 
 var game = new Phaser.Game(WIDTH, HEIGHT, Phaser.AUTO, "game");
 
